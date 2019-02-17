@@ -49,15 +49,15 @@ namespace GearHunter
             }
         }
 
-            private static string SelectKeyWord(int Count)
+            private static string SelectKeyWord(int CurrentKeyword)
             {
                 SqlConnection conn = new SqlConnection("Data Source = DESKTOP-MOM6ULT; Initial Catalog = GearHunter; Integrated Security = True");
                 conn.Open();
 
-                SqlCommand command = new SqlCommand("SELECT Keyword FROM Keywords WHERE Id = '" + Count + "'", conn);
+                SqlCommand command = new SqlCommand("SELECT Keyword FROM Keywords WHERE Id = '" + CurrentKeyword + "'", conn);
             
                 string SearchWord = (string)command.ExecuteScalar();
-                Console.WriteLine("Huidige Zoekterm" + SearchWord);    
+                Console.WriteLine("Huidige Zoekterm: " + SearchWord);    
 
                 conn.Close();
                 return SearchWord;
@@ -70,7 +70,7 @@ namespace GearHunter
 
                 SqlCommand command = new SqlCommand("SELECT COUNT(*) FROM Keywords", conn);
                 int Count = (int)command.ExecuteScalar();
-                Console.WriteLine("Aantal Zoektermen" + Count);  
+                Console.WriteLine("Aantal Zoektermen: " + Count);  
 
                 conn.Close();
                 return Count;
@@ -84,7 +84,7 @@ namespace GearHunter
                 {
                     int CurrentKeyword = 1;
                     
-                    while (CurrentKeyword < KeywordsAmount)
+                    while (CurrentKeyword <= KeywordsAmount)
                         {
                         string SearchWord = SelectKeyWord(CurrentKeyword);
 
@@ -111,13 +111,19 @@ namespace GearHunter
                         //Getting the Number of listings
                         
                         string listno = driver.FindElement(By.XPath("/html/body/div[3]/section/div[2]/div/div/div/div[2]/div/div[2]/nav/div[1]/h2/div")).Text.ToString();
-                
+                        listno.Replace(" Listings", "");
+                        //int listnoint = Convert.ToInt32(listno);
                         Console.WriteLine("Klaar met zoekwoord no#: "+ CurrentKeyword.ToString());
                         Console.WriteLine("Aantal aangetroffen listings: " + listno.ToString());
                     
                         CurrentKeyword = CurrentKeyword + 1;
                         Console.WriteLine(CurrentKeyword);
                         driver.Close();
+
+                        //if(CurrentKeyword == KeywordsAmount)
+                    //{
+                        //Running = false;
+                    //}
                 }
             }
          }
