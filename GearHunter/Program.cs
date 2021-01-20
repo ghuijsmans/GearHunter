@@ -1,4 +1,4 @@
-﻿// Copyright ocsidance.com
+﻿// Intellectual property of Gijs Huijsmans
 
 using System;
 using System.Collections.Generic;
@@ -45,7 +45,7 @@ namespace GearHunter
             mail.To.Add(TargetEmail);
             mail.Subject = "Mogelijke nieuwe advertentie: "+Keyword+". "+prijsAdvertentie;
             mail.Body = "Er is/zijn "+aantalAdvertenties+" nieuwe advertentie(s) aangetroffen onder de link: \n" + KeywordURL + ".";
-            smtpServer.Credentials = new NetworkCredential("csharpemailer@gmail.com", "Watisdeze1213");
+            //smtpServer.Credentials = new NetworkCredential(/*email*/,/*email pass*/);
             smtpServer.EnableSsl = true;
             try
             {
@@ -265,11 +265,11 @@ namespace GearHunter
 
             var mail = new MailMessage();
             var smtpServer = new SmtpClient("smtp.gmail.com", 587);
-            mail.From = new MailAddress("csharpemailer@gmail.com", "GearHunter");
-            mail.To.Add("csharpemailer@gmail.com");
+            //mail.From = new MailAddress(/*email*/, "GearHunter");
+            //mail.To.Add(/*email*/);
             mail.Subject = "Foutmelding GearHunter!";
             mail.Body = body;
-            smtpServer.Credentials = new NetworkCredential("csharpemailer@gmail.com", "Watisdeze1213");
+            //smtpServer.Credentials = new NetworkCredential(/* email, pass /*);
             smtpServer.EnableSsl = true;
             try
             {
@@ -397,9 +397,6 @@ namespace GearHunter
 
                     if (i != 100)
                     {
-                        //CW voor te testen!!!
-                        //Console.WriteLine("Kijk voor xPad!@!@!@!@!");
-
                         //Foutcode 2: xPad gebruikt door Reverb die wij niet afvangen. 
                         SendErrorMail(2, Keyword);
                     }
