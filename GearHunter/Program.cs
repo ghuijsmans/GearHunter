@@ -1,4 +1,6 @@
-﻿using System;
+﻿// Copyright ocsidance.com
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -35,28 +37,27 @@ namespace GearHunter
             return TargetEmail;
         }
 
-        private static void SendEmail(string TargetEmail, string Keyword)
+        private static void SendEmail(string TargetEmail, string Keyword, string KeywordURL, string prijsAdvertentie, int aantalAdvertenties)
         {
+            var mail = new MailMessage();
+            var smtpServer = new SmtpClient("smtp.gmail.com", 587);
+            mail.From = new MailAddress("csharpemailer@gmail.com", "GearHunter");
+            mail.To.Add(TargetEmail);
+            mail.Subject = "Mogelijke nieuwe advertentie: "+Keyword+". "+prijsAdvertentie;
+            mail.Body = "Er is/zijn "+aantalAdvertenties+" nieuwe advertentie(s) aangetroffen onder de link: \n" + KeywordURL + ".";
+            smtpServer.Credentials = new NetworkCredential("csharpemailer@gmail.com", "Watisdeze1213");
+            smtpServer.EnableSsl = true;
             try
             {
-                var mail = new MailMessage();
-                var smtpServer = new SmtpClient("smtp.gmail.com", 587);
-                mail.From = new MailAddress("csharpemailer@gmail.com", "GearHunter");
-                mail.To.Add(TargetEmail);
-                mail.Subject = "Mogelijke nieuwe advertentie!";
-                mail.Body = "Er is mogelijk een of meer nieuwe advertentie(s) aangetroffen onder de url: \n" + Keyword + ".";
-                smtpServer.Credentials = new NetworkCredential("csharpemailer@gmail.com", "Watisdeze1213");
-                smtpServer.EnableSsl = true;
                 smtpServer.Send(mail);
             }
-            catch (Exception ex)
+            catch 
             {
-                Console.WriteLine("Mail niet verstuurd: ");
-                Console.WriteLine(ex);
+                Console.WriteLine("Mail niet verstuurd");
             }
         }
         
-        private static List<string> SelectKeywords()
+        private static List<string> SelectKeywordUrls()
         {
             List<string> list_keywords = new List<string>();
             SqlConnection conn = new SqlConnection("Data Source = localhost; Initial Catalog = GearHunter; Integrated Security = True");
@@ -76,14 +77,45 @@ namespace GearHunter
             }
             catch
             {
-                string foutmelding = "Foutmelding in de catch van de lijst ophalen.";
+                // Foutcode 4: Fout bij het inladen van de keywordsURL uit de database.
+                SendErrorMail(4, "null");
+                string foutmelding = "Foutmelding in de catch van de lijst keywordsURL ophalen.";
                 List<string> melding = new List<string>();
                 melding.Add(foutmelding);
                 return melding;
             }
-        } 
+        }
 
-        private static int SelectKeyWordAmount()
+        private static List<string> GetXpaden()
+        {
+            List<string> list_xPaden = new List<string>();
+            SqlConnection conn = new SqlConnection("Data Source = localhost; Initial Catalog = GearHunter; Integrated Security = True");
+            SqlCommand command = new SqlCommand("SELECT xPath FROM xPaths", conn);
+            try
+            {
+                conn.Open();
+                SqlDataReader dr = command.ExecuteReader();
+                while (dr.Read())
+                {
+                    int i = 0;
+                    list_xPaden.Add(dr.GetString(i));
+                    i = i + 1;
+                }
+                conn.Close();
+                return list_xPaden;
+            }
+            catch
+            {
+                // Foutcode 3: Fout bij het inladen van de xPaden uit de database.
+                SendErrorMail(3, "null");
+                string foutmelding = "Foutmelding in de catch van de lijst xPaden ophalen.";
+                List<string> melding = new List<string>();
+                melding.Add(foutmelding);
+                return melding;
+            }
+        }
+
+        private static int GetKeyWordAmount()
         {
             SqlConnection conn = new SqlConnection("Data Source = localhost; Initial Catalog = GearHunter; Integrated Security = True");
             conn.Open();
@@ -103,11 +135,11 @@ namespace GearHunter
             return listingInt;
         }
 
-        private static bool CompareListingsWithDatabase(string keyword, int listnoInt)
+        private static int CompareListingsWithDatabase(string keyword, int listnoInt)
         {
             string conString = "Data Source = localhost; Initial Catalog = GearHunter; Integrated Security = True";
-            string sqlQuery1 = "SELECT LastAmount FROM Keywords WHERE Keyword = '" +keyword+ "'";
-            string sqlQuery2 = "UPDATE Keywords SET LastAmount = '" +listnoInt+ "' WHERE Keyword = '" +keyword+ "'";
+            string sqlQuery1 = "SELECT LastAmount FROM Keywords WHERE KeywordURL = '" +keyword+ "'";
+            string sqlQuery2 = "UPDATE Keywords SET LastAmount = '" +listnoInt+ "' WHERE KeywordURL = '" +keyword+ "'";
 
             SqlConnection conn = new SqlConnection(conString);
             SqlCommand cmd1 = new SqlCommand(sqlQuery1, conn);
@@ -122,18 +154,19 @@ namespace GearHunter
                 conn.Open();
                 cmd2.ExecuteNonQuery();
                 conn.Close();
-                return true;
+                int verschil = listnoInt - AmountInDatabase;
+                return verschil;
             }
             else if (AmountInDatabase > listnoInt)
             {
                 conn.Open();
                 cmd2.ExecuteNonQuery();
                 conn.Close();
-                return false;
+                return 0;
             }
             else
             {
-                return false;
+                return 0;
             }
         }
 
@@ -197,11 +230,77 @@ namespace GearHunter
             return intervalMax;
         }
 
+        private static void SendErrorMail(int foutcode, string url)
+        {
+            string body1 = "Programma loopt nog.";
+            string body2 = "Foutcode 2: xPad gebruikt door Reverb die wij niet afvangen." + url;
+            string body3 = "Foutcode 3: Fout bij het ophalen van de xPaden in de database.";
+            string body4 = "Foutcode 4: Fout bij het ophalen van de KeywordURL's in de database.";
+            string body5 = "Foutcode 5: Fout bij het ophalen van de prijs van de advertentie.";
+            string body = "";
+            if (foutcode == 1)
+            {
+                body = body1;
+            }
+            else if (foutcode == 2)
+            {
+                body = body2;
+            }
+            else if (foutcode == 3)
+            {
+                body = body3;
+            }
+            else if (foutcode == 4)
+            {
+                body = body4;
+            }
+            else if (foutcode == 5)
+            {
+                body = body5;
+            }
+            else
+            {
+                body = "Geen afgevangen foutcode!";
+            }
+
+            var mail = new MailMessage();
+            var smtpServer = new SmtpClient("smtp.gmail.com", 587);
+            mail.From = new MailAddress("csharpemailer@gmail.com", "GearHunter");
+            mail.To.Add("csharpemailer@gmail.com");
+            mail.Subject = "Foutmelding GearHunter!";
+            mail.Body = body;
+            smtpServer.Credentials = new NetworkCredential("csharpemailer@gmail.com", "Watisdeze1213");
+            smtpServer.EnableSsl = true;
+            try
+            {
+                smtpServer.Send(mail);
+            }
+            catch 
+            {
+                Console.WriteLine("Send errormail is mislukt!");
+            }
+        }
+
+        private static string knipVoorsteHelftStringEnOmdraaien(string keyWord)
+        {
+            string zoekwoord = keyWord.Substring(37);
+            char[] array1 = zoekwoord.ToCharArray();
+            Array.Reverse(array1);
+            return new string(array1);
+        }
+
+        private static string knipAchtersteHeftStringEnOmdraaien(string keyWord)
+        {
+            string zoekwoordGetrimmed = keyWord.Substring(40);
+            char[] array2 = zoekwoordGetrimmed.ToCharArray();
+            Array.Reverse(array2);
+            return new string(array2);
+        }
+
         static void Main(string[] args)
         {
-            int KeywordsAmount = SelectKeyWordAmount();
-            bool Running = true;
-
+            GetKeyWordAmount();
+            
             string TargetEmail = GetEmail();
 
             int intervalMinMainProgram = GetIntervalMinMain()*1000;
@@ -210,14 +309,13 @@ namespace GearHunter
             int intervalMaxBetweenSearches = GetIntervalMaxBetweenSearches()*1000;
 
             List<string> KeywordsUrl = new List<string>();
-            KeywordsUrl = SelectKeywords();
+            KeywordsUrl = SelectKeywordUrls();
 
             List<string> xPaden = new List<string>();
-            xPaden.Add("/html/body/div[3]/section/div[2]/div/div/div/div[2]/div/div[2]/nav/div[1]/h2/div");
-            xPaden.Add("/html/body/div[3]/section/div[2]/div/div/div/div[2]/div/div[2]/nav/section/div/h2");
-            xPaden.Add("/html/body/div/section/div[2]/div/div/div/div[2]/div/div[2]/nav/section/div/h2");
+            xPaden = GetXpaden();
 
-            while (Running == true)
+            bool Running = true;
+            while (Running)
             {
                 foreach(string Keyword in KeywordsUrl)
                 {
@@ -225,12 +323,12 @@ namespace GearHunter
                     IWebDriver driver = new ChromeDriver();
                     driver.Manage().Window.Maximize();
 
-                    //open chrome web driver
+                    // Open chrome web driver
                     driver.Navigate().GoToUrl(Keyword);
                     DriverManager(driver);
                     //IWebElement element = driver.FindElement(By.ClassName("site-search__controls__input"));
 
-                    //Switching to react modal
+                    // Switching to react modal
                     driver.SwitchTo().ActiveElement();
                     try
                     {
@@ -238,67 +336,95 @@ namespace GearHunter
                         element1.SendKeys(Keys.Escape);
                         Console.WriteLine("Popup closed.");
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Console.WriteLine(ex);
+                        Console.WriteLine("Waarschijnlijk geen popup.");
                     }
 
-                    //Getting the Number of listings
-
-                    // Ik had gehoopt dat dit zou werken, dus dat zodra je een hit hebt op regel 263 dat hij de foreach loop afbreekt omdat run true wordt.
-                    // Echter blijft hij alle paden in xPaden aflopen totdat die ze allemaal gehad heeft, ookal heeft hij het eerste pad een hit. 
-                    // Wellicht weet jij hier dan een betere oplossing voor, ik had gehoopt dat die whileloop 'overheerst' over die foreach zeg maar. 
-                    // Ook hebben we die paden nu hardcoded erinstaan (regel 215), misschien iets om die ook maar 1x uit de database te halen. 
-                    // Maar dat is mss ook iets voor later. 
+                    // Listings aantal ophalen.
 
                     string listno = "";
-                    bool run = true;
-                    while (run)
+
+                    int i = 0;
+                    while (xPaden.Count >= i)
                     {
-                        foreach(string pad in xPaden)
+                        if (listno == "")
                         {
+                            string pad = xPaden[i];
                             try
-                            {
+                            {   
                                 listno = driver.FindElement(By.XPath(pad)).Text.ToString();
                             }
                             catch
                             {
-                                Console.WriteLine("Leeg");
-                                listno = "Leeg";
+                                Console.WriteLine("Pad niet gevonden, volgende proberen.");
                             }
-                            bool checkListno = listno.Contains("listings");
-                            if (checkListno)
+                        }
+                        i++;
+                        bool checkListno = listno.Contains("listing");
+                        bool checkListno2 = listno.Contains("listings");
+
+                        if (checkListno == true || checkListno2 == true)
+                        {
+                            i = 100;
+
+                            int listnoInt = TrimStringConvertToInt(listno);
+                            int aantalNieuweAdvertenties = CompareListingsWithDatabase(Keyword, listnoInt);
+                            
+                            if (aantalNieuweAdvertenties > 0)
                             {
-                                run = false;
+                                string prijsAdvertentie = "";
+                                try
+                                {
+                                    prijsAdvertentie = driver.FindElement(By.XPath("/html/body/div[3]/section/div[2]/div/div/div/div[2]/div/div[2]/ul/li/div/a/div[2]/div/div/span")).Text.ToString();
+                                    Console.WriteLine("Prijs advertentie = " + prijsAdvertentie);
+                                }
+                                catch
+                                {
+                                    SendErrorMail(5, "null");
+                                }
+
+                                string knipsel1 = knipVoorsteHelftStringEnOmdraaien(Keyword);
+                                string knipsel2 = knipAchtersteHeftStringEnOmdraaien(knipsel1);
+                                string finalZoekwoord = knipsel2;
+                                finalZoekwoord = finalZoekwoord.Replace("%20", " ");
+                                SendEmail(TargetEmail, finalZoekwoord, Keyword, prijsAdvertentie, aantalNieuweAdvertenties);
                             }
                         }
                     }
 
-                    Console.WriteLine("Klaar met zoekwoord no#: " + Keyword);
-                    Console.WriteLine("Aantal aangetroffen listings: " + listno.ToString());
-                    driver.Close();
+                    driver.Dispose();
 
-                    int listnoInt = TrimStringConvertToInt(listno);
-                    //DEZE NOG AANPASSEN
-                    bool sendMail = CompareListingsWithDatabase(Keyword, listnoInt);
-                    if (sendMail)
+                    if (i != 100)
                     {
-                        SendEmail(TargetEmail, Keyword);
+                        //CW voor te testen!!!
+                        //Console.WriteLine("Kijk voor xPad!@!@!@!@!");
+
+                        //Foutcode 2: xPad gebruikt door Reverb die wij niet afvangen. 
+                        SendErrorMail(2, Keyword);
                     }
 
-                    // hier sleep BetweenSearches
-                    //Random r = new Random();
-                    //int intervalBetweenSearches = r.Next(intervalMinBetweenSearches, intervalMaxBetweenSearches);
-                    //Thread.Sleep(intervalBetweenSearches);
-                    
+                    //driver.Dispose();
+
+                    Console.WriteLine("Klaar met zoekURL: " + Keyword);
+                    Console.WriteLine("Resultaat: " + listno.ToString());
+
+                    // Hier sleep BetweenSearches
+
+                    Random r = new Random();
+                    int intervalBetweenSearches = r.Next(intervalMinBetweenSearches, intervalMaxBetweenSearches);
+                    Thread.Sleep(intervalBetweenSearches);
+
                     Console.WriteLine("");
                 }
 
-                // hier sleep MainProgram
-                //Random r2 = new Random();
-                //int intervalMainProgram = r2.Next(intervalMinMainProgram, intervalMaxMainProgram);
-                SendEmail("csharpemailer@gmail.com", "Still going strong!");
-                //Thread.Sleep(intervalMainProgram);
+                // Foutcode 1: Programma loopt nog! 
+                SendErrorMail(1, "null");
+
+                // Hier sleep MainProgram
+                Random r2 = new Random();
+                int intervalMainProgram = r2.Next(intervalMinMainProgram, intervalMaxMainProgram);
+                Thread.Sleep(intervalMainProgram);
             }
         }
     }
